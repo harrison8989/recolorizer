@@ -10,7 +10,8 @@ r = requests.get('https://api.flickr.com/services/rest/', params = {
     'format': 'json',
     'nojsoncallback': 1,
     'api_key': '0b34944b5b61b43ec4fb3dc6389377a6',
-    'tags': 'yellowstone,landscape'
+    'tags': 'yellowstone,landscape',
+    'tag_mode': 'all'
 })
 
 for photo in r.json()['photos']['photo']:
@@ -24,4 +25,7 @@ for photo in r.json()['photos']['photo']:
             break
 
         with open(file, 'wb') as fd:
-            shutil.copyfileobj(photo_req.raw, fd)
+            for chunk in photo_req.iter_content(1024):
+                fd.write(chunk)
+    else:
+        print file + " already exists..."
