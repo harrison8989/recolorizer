@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 import urllib2
 
 nps_site = "http://www.nps.gov/features/yell/slidefile/"
