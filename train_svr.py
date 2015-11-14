@@ -1,4 +1,4 @@
-#!/user/bin/env python
+#!/usr/bin/env python
 import os
 import code
 
@@ -13,6 +13,7 @@ import numpy as np
 
 from constants import *
 from segment_images import segment_image
+import util
 
 YUV_FROM_RGB = np.array([[0.299, 0.587, 0.114],
                          [-0.14713, -0.28886, 0.436],
@@ -64,27 +65,28 @@ def generateSubsquares(path):
 
     return subsquares, U, V
 
+if __name__ == '__main__':
+    u_svr = SVR(C=1.0, epsilon=0.2)
+    v_svr = SVR(C=1.0, epsilon=0.2)
+    for root, dirs, files in os.walk('data/flickr/'):
+        X = np.array([]).reshape(0, SQUARE_SIZE * SQUARE_SIZE)
+        U_L = np.array([])
+        V_L = np.array([])
 
-u_svm = SVR(C=1.0, epsilon=0.2)
-y_svm = SVR(C=1.0, epsilon=0.2)
-for root, dirs, files in os.walk('data/flickr/'):
-    X = np.array([]).reshape(0, SQUARE_SIZE * SQUARE_SIZE)
-    U_L = np.array([])
-    V_L = np.array([])
+        for file in files:
+            path = os.path.join(root, file)
+            if not path.endswith(".jpg"):
+                continue
 
-    for file in files:
-        path = os.path.join(root, file)
-        if not path.endswith(".jpg"):
-            continue
+            print "Training on", path, "..."
+            subsquares, U, V = generateSubsquares(path)
 
-        print "Training on", path, "..."
-        subsquares, U, V = generateSubsquares(path)
+            X = np.concatenate((X, subsquares), axis=0)
+            U_L = np.concatenate((U_L, U), axis=0)
+            V_L = np.concatenate((V_L, V), axis=0)
 
-        X = np.concatenate((X, subsquares), axis=0)
-        U_L = np.concatenate((U_L, U), axis=0)
-        V_L = np.concatenate((V_L, V), axis=0)
-
-    u_svm.fit(X, U_L)
-    y_svm.fit(X, V_L)
-    joblib.dump(u_svm, 'u_svm.model')
-    joblib.dump(y_svm, 'y_svm.model')
+        u_svr.fit(X, U_L)
+        v_svr.fit(X, V_L)
+        util.mkdirp('models/')
+        joblib.dump(u_svr, 'models/u_svr.model')
+        joblib.dump(v_svr, 'models/v_svr.model')

@@ -2,7 +2,10 @@
 import requests
 import string
 import os.path
+import util
 from atomicfile import AtomicFile
+
+util.mkdirp("data/flickr")
 
 # URL template for a Flickr image.
 photo_url = string.Template("https://farm${farmid}.staticflickr.com/${serverid}/${id}_${secret}.jpg")

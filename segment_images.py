@@ -24,8 +24,10 @@ def segment_image(path):
 
     return img, segments
 
-for root, subdirs, files in os.walk('data'):
-    for file in files:
-        path = os.path.join(root, file)
-        if path.endswith(".jpg"):
-            segment_image(path)
+# When run as a script, segment all of the files in the data directory.
+if __name__ == '__main__':
+    for root, subdirs, files in os.walk('data'):
+        for file in files:
+            path = os.path.join(root, file)
+            if path.endswith(".jpg"):
+                segment_image(path)

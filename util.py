@@ -1,5 +1,12 @@
+import os
+import errno
 
-def atomic_cache(func)
-    def wrapped_func():
-        pass
-    return atomic_cache
+
+def mkdirp(dirname):
+    try:
+        os.mkdir(dirname)
+    except OSError as exc:
+        if exc.errno == errno.EEXIST and os.path.isdir(dirname):
+            pass
+        else:
+            raise
