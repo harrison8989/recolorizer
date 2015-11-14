@@ -2,17 +2,16 @@
 import requests
 import string
 import os.path
-import shutil
 from atomicfile import AtomicFile
 
 # URL template for a Flickr image.
-photo_url= string.Template("https://farm${farmid}.staticflickr.com/${serverid}/${id}_${secret}.jpg")
+photo_url = string.Template("https://farm${farmid}.staticflickr.com/${serverid}/${id}_${secret}.jpg")
 # Page counter.
 page = 1
 
 while True:
     # Search for images with the desired tags.
-    r = requests.get('https://api.flickr.com/services/rest/', params = {
+    r = requests.get('https://api.flickr.com/services/rest/', params={
         'method': 'flickr.photos.search',
         'format': 'json',
         'nojsoncallback': 1,
