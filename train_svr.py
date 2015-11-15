@@ -46,8 +46,8 @@ def generateSubsquares(path):
 
     for k in range(n_segments):
         centroids[k] /= point_count[k]
-        U[k] = U[k] / point_count[k]
-        V[k] = V[k] / point_count[k]
+        U[k] /= point_count[k]
+        V[k] /= point_count[k]
 
     # Generate the array of squares
     subsquares = np.zeros((n_segments, SQUARE_SIZE * SQUARE_SIZE))
@@ -62,6 +62,7 @@ def generateSubsquares(path):
         for i in range(0, SQUARE_SIZE):
             for j in range(0, SQUARE_SIZE):
                 subsquares[k][i*SQUARE_SIZE + j] = yuv[i + top][j + left][0]
+        subsquares[k] = np.fft.fft2(subsquares[k].reshape(SQUARE_SIZE, SQUARE_SIZE)).reshape(SQUARE_SIZE * SQUARE_SIZE)
 
     return subsquares, U, V
 
