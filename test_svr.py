@@ -22,16 +22,14 @@ RGB_FROM_YUV = np.array([[1, 0, 1.13983],
 U_MAX = 0.436
 V_MAX = 0.615
 
-print RGB_FROM_YUV
-
 def clamp(val, low, high):
     return max(min(val, high), low)
 
 def clampU(val):
-    return clamp(val, -U_MAX, 0)
+    return clamp(val, -U_MAX, U_MAX)
 
 def clampV(val):
-    return clamp(val, -V_MAX, 0)
+    return clamp(val, -V_MAX, U_MAX)
 
 def retrieveRGB(img):
     rgb = np.dot(img, RGB_FROM_YUV)
