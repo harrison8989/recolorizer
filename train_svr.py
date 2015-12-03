@@ -67,8 +67,8 @@ def generateSubsquares(path):
     return subsquares, U, V
 
 if __name__ == '__main__':
-    u_svr = SVR(C=1.0, epsilon=0.2)
-    v_svr = SVR(C=1.0, epsilon=0.2)
+    u_svr = SVR(C=1.0, epsilon=.1)
+    v_svr = SVR(C=1.0, epsilon=.1)
     for root, dirs, files in os.walk('data/flickr/'):
         X = np.array([]).reshape(0, SQUARE_SIZE * SQUARE_SIZE)
         U_L = np.array([])
