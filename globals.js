@@ -38,3 +38,17 @@ Utils.clamp = function (val, min, max) {
 Utils.randInt = function (min, max) {
   return Math.floor(Math.random() * (max - min)) + min;
 }
+
+/** ========= Polyfills ======== **/
+
+if (!String.prototype.endsWith) {
+  String.prototype.endsWith = function(searchString, position) {
+      var subjectString = this.toString();
+      if (typeof position !== 'number' || !isFinite(position) || Math.floor(position) !== position || position > subjectString.length) {
+        position = subjectString.length;
+      }
+      position -= searchString.length;
+      var lastIndex = subjectString.indexOf(searchString, position);
+      return lastIndex !== -1 && lastIndex === position;
+  };
+}
