@@ -12,7 +12,7 @@ from constants import *
 
 def segment_image(path):
     img = img_as_float(imread(path))
-    segment_file = path + ".segments"
+    segment_file = path + "." + str(N_SEGMENTS) + ".segments"
     if os.path.isfile(segment_file):
         return img, np.load(segment_file)
 
