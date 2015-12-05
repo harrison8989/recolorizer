@@ -1,0 +1,8 @@
+{
+  "dependencies": {
+    "convnetjs": "^0.3.0",
+    "fs-walk": "0.0.1",
+    "jimp": "^0.2.20",
+    "ndarray": "^1.0.18"
+  }
+}

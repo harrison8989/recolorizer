@@ -4,3 +4,4 @@ data/
 .floo
 .flooignore
 models/
+node_modules
