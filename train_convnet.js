@@ -24,9 +24,10 @@ var trainer = new convnetjs.Trainer(net, {method: 'adadelta', l2_decay: 0.001, b
 
 // Train.
 var promise = Promise.resolve();
+
 walk.walkSync('data/flickr/', function (basedir, filename, stat) {
 	if (filename.endsWith('.jpg')) {
-		promise.then(function() {
+		promise = promise.then(function() {
 			return new Promise(function(resolve, reject) {
 				jimp.read(path.join(basedir, filename), function (err, image) {
 					if (err) {
