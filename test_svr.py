@@ -16,9 +16,13 @@ from constants import *
 from segment_images import segment_image
 import util
 
+# TODO: Put these in constants folder
 RGB_FROM_YUV = np.array([[1, 0, 1.13983],
                          [1, -0.39465, -.58060],
                          [1, 2.03211, 0]]).T
+YUV_FROM_RGB = np.array([[0.299, 0.587, 0.114],
+                         [-0.14713, -0.28886, 0.436],
+                         [0.615, -0.51499, -0.10001]]).T
 U_MAX = 0.436
 V_MAX = 0.615
 
@@ -37,25 +41,26 @@ def retrieveRGB(img):
         rgb[i][j][k] = clamp(rgb[i][j][k], 0, 1)
     return rgb
 
-# Generates the adjacency list for each of the segments in the image. NOTE:
-# should this include how similar edges are? If so, how do we take this into
-# account? Or do we care about this at all?
-def generate_adjacencies(segments, n_segments, height, width):
+def retrieveYUV(img):
+    return np.dot(img, YUV_FROM_RGB)
+
+# Generates the adjacency list for each of the segments in the image.
+def generate_adjacencies(segments, n_segments, img, subsquares):
     adjacency_list = []
     for i in range(n_segments):
         adjacency_list.append(set())
     for (i,j), value in np.ndenumerate(segments):
         # Check vertical adjacency
-        if i < height - 1:
-            if value != segments[i + 1][j]:
-                newValue = segments[i + 1][j]
+        if i < img.shape[0] - 1:
+            newValue = segments[i + 1][j]
+            if value != newValue and np.linalg.norm(subsquares[value] - subsquares[newValue]) < THRESHOLD:
                 adjacency_list[value].add(newValue)
                 adjacency_list[newValue].add(value)
 
         # Check horizontal adjacency
-        if j < width - 1:
-            if value != segments[i][j + 1]:
-                newValue = segments[i][j + 1]
+        if j < img.shape[1] - 1:
+            newValue = segments[i][j + 1]
+            if value != newValue and np.linalg.norm(subsquares[value] - subsquares[newValue]) < THRESHOLD:
                 adjacency_list[value].add(newValue)
                 adjacency_list[newValue].add(value)
 
@@ -66,11 +71,11 @@ def generate_adjacencies(segments, n_segments, height, width):
 # Iterated Conditional Modes. Return the prediction of the hidden U and V values
 # of the segments.
 # For now, we assume that the U and V channels behave independently.
-def apply_mrf(observed_u, observed_v, segments, n_segments, img):
+def apply_mrf(observed_u, observed_v, segments, n_segments, img, subsquares):
     hidden_u = np.copy(observed_u)  # Initialize hidden U and V to the observed
     hidden_v = np.copy(observed_v)
 
-    adjacency_list = generate_adjacencies(segments, n_segments, img.shape[0], img.shape[1])
+    adjacency_list = generate_adjacencies(segments, n_segments, img, subsquares)
 
     for iteration in range(ICM_ITERATIONS):
         print 'ICM iteration:', iteration
@@ -104,29 +109,37 @@ def apply_mrf(observed_u, observed_v, segments, n_segments, img):
                     v_min = v
             new_v[k] = v_min
 
-        print np.linalg.norm(hidden_u - new_u)
-        print np.linalg.norm(hidden_v - new_v)
+        u_diff = np.linalg.norm(hidden_u - new_u)
+        v_diff = np.linalg.norm(hidden_v - new_v)
+        print 'Difference in U channel:', u_diff
+        print 'Difference in V channel:', v_diff
         hidden_u = new_u
         hidden_v = new_v
+        if u_diff < ITER_EPSILON and v_diff < ITER_EPSILON:
+            break
 
     return hidden_u, hidden_v
 
 # Given a black and white image, predict its chrominance (U and V values in YUV space)
 def predict_image(u_svr, v_svr, path):
     img, segments = segment_image(path)
+    yuv = retrieveYUV(img)  # Retrieve YUV
     n_segments = segments.max() + 1
 
     # Construct the centroids of the image
     point_count = np.zeros(n_segments)
     centroids = np.zeros((n_segments, 2))
+    luminance = np.zeros(n_segments)
 
     for (i,j), value in np.ndenumerate(segments):
         point_count[value] += 1
         centroids[value][0] += i
         centroids[value][1] += j
+        luminance[value] += yuv[i][j][0]
 
     for k in range(n_segments):
         centroids[k] /= point_count[k]
+        luminance[k] /= point_count[k]
 
     # Generate the subsquares
     subsquares = np.zeros((n_segments, SQUARE_SIZE * SQUARE_SIZE))
@@ -151,7 +164,7 @@ def predict_image(u_svr, v_svr, path):
         predicted_v[k] = clampU(v_svr.predict(subsquares[k])*2)
 
     # Apply MRF to smooth out colorings
-    predicted_u, predicted_v = apply_mrf(predicted_u, predicted_v, segments, n_segments, img)
+    predicted_u, predicted_v = apply_mrf(predicted_u, predicted_v, segments, n_segments, img, subsquares)
 
     # Reconstruct images
     for (i,j), value in np.ndenumerate(segments):
