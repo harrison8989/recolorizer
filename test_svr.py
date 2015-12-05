@@ -37,18 +37,94 @@ def retrieveRGB(img):
         rgb[i][j][k] = clamp(rgb[i][j][k], 0, 1)
     return rgb
 
+# Generates the adjacency list for each of the segments in the image. NOTE:
+# should this include how similar edges are? If so, how do we take this into
+# account? Or do we care about this at all?
+def generate_adjacencies(segments, n_segments, height, width):
+    adjacency_list = []
+    for i in range(n_segments):
+        adjacency_list.append(set())
+    for (i,j), value in np.ndenumerate(segments):
+        # Check vertical adjacency
+        if i < height - 1:
+            if value != segments[i + 1][j]:
+                newValue = segments[i + 1][j]
+                adjacency_list[value].add(newValue)
+                adjacency_list[newValue].add(value)
+
+        # Check horizontal adjacency
+        if j < width - 1:
+            if value != segments[i][j + 1]:
+                newValue = segments[i][j + 1]
+                adjacency_list[value].add(newValue)
+                adjacency_list[newValue].add(value)
+
+    return adjacency_list
+
+# Given the prior observed_u and observed_v, which are generated using the SVR,
+# represent the system as a Markov Random Field and optimize over it using
+# Iterated Conditional Modes. Return the prediction of the hidden U and V values
+# of the segments.
+# For now, we assume that the U and V channels behave independently.
+def apply_mrf(observed_u, observed_v, segments, n_segments, img):
+    hidden_u = np.copy(observed_u)  # Initialize hidden U and V to the observed
+    hidden_v = np.copy(observed_v)
+
+    adjacency_list = generate_adjacencies(segments, n_segments, img.shape[0], img.shape[1])
+
+    for iteration in range(ICM_ITERATIONS):
+        print 'ICM iteration:', iteration
+        new_u = np.zeros(n_segments)
+        new_v = np.zeros(n_segments)
+
+        for k in range(n_segments):
+
+            u_potential = 100000
+            v_potential = 100000
+            u_min = -1
+            v_min = -1
+
+            # Compute conditional probability over all possibilities of U
+            for u in np.arange(-U_MAX, U_MAX, .001):
+                u_computed = (u - observed_u[k]) ** 2 / (2 * COVAR)
+                for adjacency in adjacency_list[k]:
+                    u_computed += WEIGHT_DIFF * min((u - hidden_u[adjacency]) ** 2, MAX_DIFF)
+                if u_computed < u_potential:
+                    u_potential = u_computed
+                    u_min = u
+            new_u[k] = u_min
+
+            # Compute conditional probability over all possibilities of V
+            for v in np.arange(-V_MAX, V_MAX, .001):
+                v_computed = (v - observed_v[k]) ** 2 / (2 * COVAR)
+                for adjacency in adjacency_list[k]:
+                    v_computed += WEIGHT_DIFF * min((v - observed_v[adjacency]) ** 2, MAX_DIFF)
+                if v_computed < v_potential:
+                    v_potential = v_computed
+                    v_min = v
+            new_v[k] = v_min
+
+        print np.linalg.norm(hidden_u - new_u)
+        print np.linalg.norm(hidden_v - new_v)
+        hidden_u = new_u
+        hidden_v = new_v
+
+    return hidden_u, hidden_v
+
 # Given a black and white image, predict its chrominance (U and V values in YUV space)
 def predict_image(u_svr, v_svr, path):
     img, segments = segment_image(path)
-    n_segments = segments.max()
+    n_segments = segments.max() + 1
 
     # Construct the centroids of the image
     point_count = np.zeros(n_segments)
     centroids = np.zeros((n_segments, 2))
+
     for (i,j), value in np.ndenumerate(segments):
-        point_count[value - 1] += 1
-        centroids[value - 1][0] += i
-        centroids[value - 1][1] += j
+        point_count[value] += 1
+        centroids[value][0] += i
+        centroids[value][1] += j
+
     for k in range(n_segments):
         centroids[k] /= point_count[k]
 
@@ -74,10 +150,13 @@ def predict_image(u_svr, v_svr, path):
         predicted_u[k] = clampU(u_svr.predict(subsquares[k])*2)
         predicted_v[k] = clampU(v_svr.predict(subsquares[k])*2)
 
+    # Apply MRF to smooth out colorings
+    predicted_u, predicted_v = apply_mrf(predicted_u, predicted_v, segments, n_segments, img)
+
     # Reconstruct images
     for (i,j), value in np.ndenumerate(segments):
-        img[i][j][1] = predicted_u[value-1]
-        img[i][j][2] = predicted_v[value-1]
+        img[i][j][1] = predicted_u[value]
+        img[i][j][2] = predicted_v[value]
     rgb = retrieveRGB(img)
 
     # Draw the actual figure

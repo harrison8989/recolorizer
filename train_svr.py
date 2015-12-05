@@ -29,7 +29,7 @@ def retrieveYUV(img):
 def generateSubsquares(path):
     img, segments = segment_image(path)
     yuv = retrieveYUV(img)
-    n_segments = segments.max()
+    n_segments = segments.max() + 1
     # code.InteractiveConsole(locals=locals()).interact()
 
     # Compute the centroids/average U and V of each of the superpixels
@@ -38,11 +38,11 @@ def generateSubsquares(path):
     U = np.zeros(n_segments)
     V = np.zeros(n_segments)
     for (i,j), value in np.ndenumerate(segments):
-        point_count[value - 1] += 1
-        centroids[value - 1][0] += i
-        centroids[value - 1][1] += j
-        U[value - 1] += yuv[i][j][1]
-        V[value - 1] += yuv[i][j][2]
+        point_count[value] += 1
+        centroids[value][0] += i
+        centroids[value][1] += j
+        U[value] += yuv[i][j][1]
+        V[value] += yuv[i][j][2]
 
     for k in range(n_segments):
         centroids[k] /= point_count[k]
@@ -74,6 +74,8 @@ if __name__ == '__main__':
         U_L = np.array([])
         V_L = np.array([])
 
+        numIters = 0
+
         for file in files:
             path = os.path.join(root, file)
             if not path.endswith(".jpg"):
@@ -85,6 +87,10 @@ if __name__ == '__main__':
             X = np.concatenate((X, subsquares), axis=0)
             U_L = np.concatenate((U_L, U), axis=0)
             V_L = np.concatenate((V_L, V), axis=0)
+
+            numIters += 1
+            if numIters > 100:
+                break
 
         u_svr.fit(X, U_L)
         v_svr.fit(X, V_L)
