@@ -28,6 +28,10 @@ walk.walkSync('data/flickr/', function (basedir, filename, stat) {
 	if (filename.endsWith('.jpg')) {
 		promises.push(new Promise(function(resolve, reject) {
 			jimp.read(path.join(basedir, filename), function (err, image) {
+				if (err) {
+					console.error(err);
+					process.exit();
+				}
 				console.log("Training on " + filename + " (" + image.bitmap.width
 					+ "x" + image.bitmap.height + ") ...");
 				var numPixels = image.bitmap.width * image.bitmap.height * 3;
