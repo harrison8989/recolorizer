@@ -204,9 +204,6 @@ if __name__ == '__main__':
             total_error = 0
             num_files = 0
 
-            if model % 9 >= 5:
-                continue
-
             for root, dirs, files in os.walk(args.file):
                 for file in files:
                     path = os.path.join(root, file)
