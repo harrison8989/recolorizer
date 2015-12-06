@@ -10,9 +10,9 @@ import numpy as np
 from constants import *
 
 
-def segment_image(path):
+def segment_image(path, n_segments = N_SEGMENTS):
     img = img_as_float(imread(path))
-    segment_file = path + "." + str(N_SEGMENTS) + ".segments"
+    segment_file = path + "." + str(n_segments) + ".segments"
     if os.path.isfile(segment_file):
         return img, np.load(segment_file)
 

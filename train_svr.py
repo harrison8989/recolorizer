@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+import argparse
 import os
 import code
 
@@ -67,14 +68,16 @@ def generateSubsquares(path):
     return subsquares, U, V
 
 if __name__ == '__main__':
-    u_svr = SVR(C=1.0, epsilon=.1)
-    v_svr = SVR(C=1.0, epsilon=.1)
-    for root, dirs, files in os.walk('data/flickr/'):
+    parser = argparse.ArgumentParser(description='Train the SVR.')
+    parser.add_argument('-a', help='Specify training all models.', action='store_true')
+    parser.add_argument('-t', metavar='training_set', help='The training set to be used for training', default='data/flickr/')
+    args = parser.parse_args()
+    print 'Training data set on files in:', args.t
+
+    for root, dirs, files in os.walk(args.t):
         X = np.array([]).reshape(0, SQUARE_SIZE * SQUARE_SIZE)
         U_L = np.array([])
         V_L = np.array([])
-
-        numIters = 0
 
         for file in files:
             path = os.path.join(root, file)
@@ -88,12 +91,29 @@ if __name__ == '__main__':
             U_L = np.concatenate((U_L, U), axis=0)
             V_L = np.concatenate((V_L, V), axis=0)
 
-            numIters += 1
-            if numIters > 100:
-                break
-
-        u_svr.fit(X, U_L)
-        v_svr.fit(X, V_L)
         util.mkdirp('models/')
-        joblib.dump(u_svr, 'models/u_svr.model')
-        joblib.dump(v_svr, 'models/v_svr.model')
+
+        if args.a:  # Train all of the data sets
+            model_count = 0
+            for c in C_LIST:
+                for epsilon in EPSILON_LIST:
+                    u_path = 'models/u_svr' + str(model_count) + '.model'
+                    v_path = 'models/v_svr' + str(model_count) + '.model'
+                    if not os.path.isfile(u_path) or not os.path.isfile(v_path):
+                        print 'Fitting the model given by C =', c, ', epsilon =', epsilon
+                        u_svr = SVR(C=c, epsilon=epsilon)
+                        v_svr = SVR(C=c, epsilon=epsilon)
+                        u_svr.fit(X, U_L)
+                        v_svr.fit(X, V_L)
+                        joblib.dump(u_svr, u_path)
+                        joblib.dump(v_svr, v_path)
+                    model_count += 1
+
+        else:       # Only train the model given by the defaults
+            print 'Fitting the model given by C =', C, ', epsilon =', SVR_EPSILON
+            u_svr = SVR(C=C, epsilon=SVR_EPSILON)
+            v_svr = SVR(C=C, epsilon=SVR_EPSILON)
+            u_svr.fit(X, U_L)
+            v_svr.fit(X, V_L)
+            joblib.dump(u_svr, 'models/u_svr.model')
+            joblib.dump(v_svr, 'models/v_svr.model')
