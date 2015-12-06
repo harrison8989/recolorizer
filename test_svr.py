@@ -78,7 +78,6 @@ def apply_mrf(observed_u, observed_v, segments, n_segments, img, subsquares):
     adjacency_list = generate_adjacencies(segments, n_segments, img, subsquares)
 
     for iteration in range(ICM_ITERATIONS):
-        print 'ICM iteration:', iteration
         new_u = np.zeros(n_segments)
         new_v = np.zeros(n_segments)
 
@@ -111,8 +110,6 @@ def apply_mrf(observed_u, observed_v, segments, n_segments, img, subsquares):
 
         u_diff = np.linalg.norm(hidden_u - new_u)
         v_diff = np.linalg.norm(hidden_v - new_v)
-        print 'Difference in U channel:', u_diff
-        print 'Difference in V channel:', v_diff
         hidden_u = new_u
         hidden_v = new_v
         if u_diff < ITER_EPSILON and v_diff < ITER_EPSILON:
@@ -120,10 +117,10 @@ def apply_mrf(observed_u, observed_v, segments, n_segments, img, subsquares):
 
     return hidden_u, hidden_v
 
-# Given a black and white image, predict its chrominance (U and V values in YUV space)
-def predict_image(u_svr, v_svr, path):
+# Given an image, predict its chrominance (U and V values in YUV space)
+def predict_image(u_svr, v_svr, path, verbose):
     img, segments = segment_image(path)
-    yuv = retrieveYUV(img)  # Retrieve YUV
+    yuv = retrieveYUV(img)   # Use first component of yuv to obtain black and white
     n_segments = segments.max() + 1
 
     # Construct the centroids of the image
@@ -153,7 +150,7 @@ def predict_image(u_svr, v_svr, path):
             left = img.shape[1] - 1 - SQUARE_SIZE
         for i in range(0, SQUARE_SIZE):
             for j in range(0, SQUARE_SIZE):
-                subsquares[k][i*SQUARE_SIZE + j] = img[i + top][j + left][0]
+                subsquares[k][i*SQUARE_SIZE + j] = yuv[i + top][j + left][0]
         subsquares[k] = np.fft.fft2(subsquares[k].reshape(SQUARE_SIZE, SQUARE_SIZE)).reshape(SQUARE_SIZE * SQUARE_SIZE)
 
     # Predict using SVR
@@ -168,23 +165,57 @@ def predict_image(u_svr, v_svr, path):
 
     # Reconstruct images
     for (i,j), value in np.ndenumerate(segments):
-        img[i][j][1] = predicted_u[value]
-        img[i][j][2] = predicted_v[value]
-    rgb = retrieveRGB(img)
+        yuv[i][j][1] = predicted_u[value]
+        yuv[i][j][2] = predicted_v[value]
+    rgb = retrieveRGB(yuv)
 
-    # Draw the actual figure
-    fig = plt.figure(frameon=False)
-    ax = plt.Axes(fig, [0., 0., 1., 1.])
-    ax.set_axis_off()
-    fig.add_axes(ax)
-    ax.imshow(rgb)
-    plt.show()
+    # Compute the norm error. Note that it will be wildly incorrect if the img is b/w.
+    error = 1000 * np.linalg.norm(rgb - img) / (img.shape[0] * img.shape[1])
+
+    if verbose:
+        print 'Norm error:', error
+        # Draw the actual figure
+        fig = plt.figure(frameon=False)
+        ax = plt.Axes(fig, [0., 0., 1., 1.])
+        ax.set_axis_off()
+        fig.add_axes(ax)
+        ax.imshow(rgb)
+        plt.show()
+
+    return error
 
 if __name__ == '__main__':
-    u_svr = joblib.load('models/u_svr.model')
-    v_svr = joblib.load('models/v_svr.model')
-
     parser = argparse.ArgumentParser(description='Test the SVR on an image.')
-    parser.add_argument('file', metavar='file_name', help='The image to be tested')
+    parser.add_argument('file', metavar='file_name', help='The image to be tested. If -a is selected, the script will instead test on the testing set.')
+    parser.add_argument('-a', help='Specify training all models.', action='store_true')
     args = parser.parse_args()
-    predict_image(u_svr, v_svr, args.file)
+
+    if args.a:   # Test each of the models on the given data set.
+        u_svrs = []
+        v_svrs = []
+        print 'Loading models:'
+        for model in range(len(C_LIST) * len(EPSILON_LIST)):
+            u_svrs.append(joblib.load('models/u_svr' + str(model) + '.model'))
+            v_svrs.append(joblib.load('models/v_svr' + str(model) + '.model'))
+        print 'Finished loading models.\n'
+
+        for model in range(len(C_LIST) * len(EPSILON_LIST)):
+            print 'Running predictions for model', model
+            total_error = 0
+            num_files = 0
+
+            if model % 9 >= 5:
+                continue
+
+            for root, dirs, files in os.walk(args.file):
+                for file in files:
+                    path = os.path.join(root, file)
+                    if path.endswith('.jpg'):
+                        total_error += predict_image(u_svrs[model], v_svrs[model], path, False)
+                        num_files += 1
+            print 'Total error for model', model, ':', total_error / num_files
+
+    else:        # Test on the single image
+        u_svr = joblib.load('models/u_svr.model')
+        v_svr = joblib.load('models/v_svr.model')
+        predict_image(u_svr, v_svr, args.file, True)
