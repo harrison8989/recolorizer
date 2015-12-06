@@ -22,7 +22,7 @@ global.YUVToRGB = function (yuv) {
 global.U_MAX = 0.436;
 global.V_MAX = 0.615;
 
-global.SQUARE_SIZE = 32;
+global.SQUARE_SIZE = 10;
 
 /* Instead of training on every pixel in an image (and the square around it),
 randomly sample this many pixles to train on. */
