@@ -92,7 +92,7 @@ def apply_mrf(observed_u, observed_v, segments, n_segments, img, subsquares):
             for u in np.arange(-U_MAX, U_MAX, .001):
                 u_computed = (u - observed_u[k]) ** 2 / (2 * COVAR)
                 for adjacency in adjacency_list[k]:
-                    u_computed += WEIGHT_DIFF * min((u - hidden_u[adjacency]) ** 2, MAX_DIFF)
+                    u_computed += WEIGHT_DIFF * ((u - hidden_u[adjacency]) ** 2)
                 if u_computed < u_potential:
                     u_potential = u_computed
                     u_min = u
@@ -102,7 +102,7 @@ def apply_mrf(observed_u, observed_v, segments, n_segments, img, subsquares):
             for v in np.arange(-V_MAX, V_MAX, .001):
                 v_computed = (v - observed_v[k]) ** 2 / (2 * COVAR)
                 for adjacency in adjacency_list[k]:
-                    v_computed += WEIGHT_DIFF * min((v - observed_v[adjacency]) ** 2, MAX_DIFF)
+                    v_computed += WEIGHT_DIFF * ((v - hidden_v[adjacency]) ** 2)
                 if v_computed < v_potential:
                     v_potential = v_computed
                     v_min = v
@@ -188,6 +188,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Test the SVR on an image.')
     parser.add_argument('file', metavar='file_name', help='The image to be tested. If -a is selected, the script will instead test on the testing set.')
     parser.add_argument('-a', help='Specify training all models.', action='store_true')
+    parser.add_argument('-c', help='Specify training the variables for ICM.', action='store_true')
     args = parser.parse_args()
 
     if args.a:   # Test each of the models on the given data set.
@@ -211,6 +212,39 @@ if __name__ == '__main__':
                         total_error += predict_image(u_svrs[model], v_svrs[model], path, False)
                         num_files += 1
             print 'Total error for model', model, ':', total_error / num_files
+
+    if args.c:   # Test each of the models on the given data set, modifying the ICM constants.
+        u_svr = joblib.load('models/u_svr.model')
+        v_svr = joblib.load('models/v_svr.model')
+        for weight_diff in [.4, .6, .8, 1, 1.2, 1.4, 1.6, 1.8, 2]:
+            print 'Running predictions for weight difference:', weight_diff
+            WEIGHT_DIFF = weight_diff
+            total_error = 0
+            num_files = 0
+
+            for root, dirs, files in os.walk(args.file):
+                for file in files:
+                    path = os.path.join(root, file)
+                    if path.endswith('.jpg'):
+                        total_error += predict_image(u_svr, v_svr, path, False)
+                        num_files += 1
+            print 'Total error for weight diff', weight_diff, ':', total_error / num_files
+        WEIGHT_DIFF = 1
+
+        for threshold in [15, 20, 25, 30, 35, 40]:
+            print 'Running predictions for threshold:', threshold
+            THRESHOLD = threshold
+            total_error = 0
+            num_files = 0
+
+            for root, dirs, files in os.walk(args.file):
+                for file in files:
+                    path = os.path.join(root, file)
+                    if path.endswith('.jpg'):
+                        total_error += predict_image(u_svr, v_svr, path, False)
+                        num_files += 1
+            print 'Total error for threshold', threshold, ':', total_error / num_files
+
 
     else:        # Test on the single image
         u_svr = joblib.load('models/u_svr.model')
