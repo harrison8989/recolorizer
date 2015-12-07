@@ -8,6 +8,9 @@ C = .125   # C = .25 is also pretty good
 C_LIST = [.015625, .03125, .0625, .125, .25, .5]
 EPSILON_LIST = [.015625, .03125, .0625, .125]
 
+WEIGHT_DIFF_LIST = []    #[1.4, 1.6, 1.8, 2, 2.2, 2.4, 2.6, 2.8, 3]
+THRESHOLD_LIST = [0, 25] #[20, 25, 30, 35, 40]
+
 # Constants for running ICM on the MRF
 ICM_ITERATIONS = 10
 ITER_EPSILON = .01

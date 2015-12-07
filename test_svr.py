@@ -6,6 +6,7 @@ import os
 from sklearn.svm import SVR
 from skimage.segmentation import slic, mark_boundaries
 from skimage.data import imread
+from skimage.io import imsave
 from skimage.util import img_as_float
 from sklearn.externals import joblib
 
@@ -118,7 +119,7 @@ def apply_mrf(observed_u, observed_v, segments, n_segments, img, subsquares):
     return hidden_u, hidden_v
 
 # Given an image, predict its chrominance (U and V values in YUV space)
-def predict_image(u_svr, v_svr, path, verbose):
+def predict_image(u_svr, v_svr, path, verbose, output_file = None):
     img, segments = segment_image(path)
     yuv = retrieveYUV(img)   # Use first component of yuv to obtain black and white
     n_segments = segments.max() + 1
@@ -180,15 +181,19 @@ def predict_image(u_svr, v_svr, path, verbose):
         ax.set_axis_off()
         fig.add_axes(ax)
         ax.imshow(rgb)
+        if output_file:
+            imsave(output_file, rgb)
         plt.show()
 
     return error
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Test the SVR on an image.')
-    parser.add_argument('file', metavar='file_name', help='The image to be tested. If -a is selected, the script will instead test on the testing set.')
-    parser.add_argument('-a', help='Specify training all models.', action='store_true')
-    parser.add_argument('-c', help='Specify training the variables for ICM.', action='store_true')
+    parser.add_argument('file', metavar='file_name', help='The image to be tested. If -a or -c is selected, the script will instead test on the testing set.')
+    parser.add_argument('-a', help='Specify training the different models', action='store_true')
+    parser.add_argument('-c', help='Specify training the model over different variables for ICM.', action='store_true')
+    parser.add_argument('-f', metavar='output_file', help='Output file for model', default='svr.model')
+    parser.add_argument('-s', metavar='save_location', help='Location to save the file', default='out.png')
     args = parser.parse_args()
 
     if args.a:   # Test each of the models on the given data set.
@@ -216,7 +221,7 @@ if __name__ == '__main__':
     if args.c:   # Test each of the models on the given data set, modifying the ICM constants.
         u_svr = joblib.load('models/u_svr.model')
         v_svr = joblib.load('models/v_svr.model')
-        for weight_diff in [1.4, 1.6, 1.8, 2, 2.2, 2.4, 2.6, 2.8, 3]:
+        for weight_diff in WEIGHT_DIFF_LIST:
             print 'Running predictions for weight difference:', weight_diff
             WEIGHT_DIFF = weight_diff
             total_error = 0
@@ -231,7 +236,7 @@ if __name__ == '__main__':
             print 'Total error for weight diff', weight_diff, ':', total_error / num_files
         WEIGHT_DIFF = 2
 
-        for threshold in [20, 25, 30, 35, 40]:
+        for threshold in THRESHOLD_LIST:
             print 'Running predictions for threshold:', threshold
             THRESHOLD = threshold
             total_error = 0
@@ -247,6 +252,6 @@ if __name__ == '__main__':
 
 
     else:        # Test on the single image
-        u_svr = joblib.load('models/u_svr.model')
-        v_svr = joblib.load('models/v_svr.model')
-        predict_image(u_svr, v_svr, args.file, True)
+        u_svr = joblib.load('models/u_' + args.f)
+        v_svr = joblib.load('models/v_' + args.f)
+        predict_image(u_svr, v_svr, args.file, True, args.s)

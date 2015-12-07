@@ -71,6 +71,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Train the SVR.')
     parser.add_argument('-a', help='Specify training all models.', action='store_true')
     parser.add_argument('-t', metavar='training_set', help='The training set to be used for training', default='data/flickr/')
+    parser.add_argument('-f', metavar='output_file', help='Output file for model', default='svr.model')
     args = parser.parse_args()
     print 'Training data set on files in:', args.t
 
@@ -115,5 +116,5 @@ if __name__ == '__main__':
             v_svr = SVR(C=C, epsilon=SVR_EPSILON)
             u_svr.fit(X, U_L)
             v_svr.fit(X, V_L)
-            joblib.dump(u_svr, 'models/u_svr.model')
-            joblib.dump(v_svr, 'models/v_svr.model')
+            joblib.dump(u_svr, 'models/u_' + args.f)
+            joblib.dump(v_svr, 'models/v_' + args.f)
