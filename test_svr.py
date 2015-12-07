@@ -216,7 +216,7 @@ if __name__ == '__main__':
     if args.c:   # Test each of the models on the given data set, modifying the ICM constants.
         u_svr = joblib.load('models/u_svr.model')
         v_svr = joblib.load('models/v_svr.model')
-        for weight_diff in [.4, .6, .8, 1, 1.2, 1.4, 1.6, 1.8, 2]:
+        for weight_diff in [1.4, 1.6, 1.8, 2, 2.2, 2.4, 2.6, 2.8, 3]:
             print 'Running predictions for weight difference:', weight_diff
             WEIGHT_DIFF = weight_diff
             total_error = 0
@@ -229,9 +229,9 @@ if __name__ == '__main__':
                         total_error += predict_image(u_svr, v_svr, path, False)
                         num_files += 1
             print 'Total error for weight diff', weight_diff, ':', total_error / num_files
-        WEIGHT_DIFF = 1
+        WEIGHT_DIFF = 2
 
-        for threshold in [15, 20, 25, 30, 35, 40]:
+        for threshold in [20, 25, 30, 35, 40]:
             print 'Running predictions for threshold:', threshold
             THRESHOLD = threshold
             total_error = 0

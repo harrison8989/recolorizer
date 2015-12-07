@@ -13,4 +13,5 @@ ICM_ITERATIONS = 10
 ITER_EPSILON = .01
 COVAR = 0.25       # Covariance of predicted chrominance from SVR and actual covariance
 WEIGHT_DIFF = 2    # Relative importance of neighboring superpixels
-THRESHOLD = 25     # Threshold for comparing adjacent superpixels. 100 is too high to change anything.
+THRESHOLD = 25     # Threshold for comparing adjacent superpixels.
+                   # Setting a higher threshold reduces error, but causes the image to appear more uniform.
