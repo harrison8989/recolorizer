@@ -28,7 +28,7 @@ U_MAX = 0.436
 V_MAX = 0.615
 
 def clamp(val, low, high):
-    return max(min(val, high), low)
+    return np.maximum(np.minimum(val, high), low)
 
 def clampU(val):
     return clamp(val, -U_MAX, U_MAX)
@@ -37,10 +37,7 @@ def clampV(val):
     return clamp(val, -V_MAX, U_MAX)
 
 def retrieveRGB(img):
-    rgb = np.dot(img, RGB_FROM_YUV)
-    for (i, j, k), value in np.ndenumerate(rgb):
-        rgb[i][j][k] = clamp(rgb[i][j][k], 0, 1)
-    return rgb
+    return clamp(np.dot(img, RGB_FROM_YUV), 0, 1)
 
 def retrieveYUV(img):
     return np.dot(img, YUV_FROM_RGB)
@@ -155,11 +152,8 @@ def predict_image(u_svr, v_svr, path, verbose, output_file = None):
         subsquares[k] = np.fft.fft2(subsquares[k].reshape(SQUARE_SIZE, SQUARE_SIZE)).reshape(SQUARE_SIZE * SQUARE_SIZE)
 
     # Predict using SVR
-    predicted_u = np.zeros(n_segments)
-    predicted_v = np.zeros(n_segments)
-    for k in range(n_segments):
-        predicted_u[k] = clampU(u_svr.predict(subsquares[k])*2)
-        predicted_v[k] = clampU(v_svr.predict(subsquares[k])*2)
+    predicted_u = clampU(u_svr.predict(subsquares)*2)
+    predicted_v = clampV(v_svr.predict(subsquares)*2)
 
     # Apply MRF to smooth out colorings
     predicted_u, predicted_v = apply_mrf(predicted_u, predicted_v, segments, n_segments, img, subsquares)
