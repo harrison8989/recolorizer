@@ -1,4 +1,4 @@
-# Recolorizer
+# AI Image Recolorizer
 
 ![Imgur](https://i.imgur.com/HNee6oE.png)
 
