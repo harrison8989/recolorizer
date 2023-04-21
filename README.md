@@ -1,6 +1,6 @@
 # AI Image Recolorizer
 
-![Imgur](https://i.imgur.com/HNee6oE.png)
+![](./example.png)
 
 [Research Paper](http://cs229.stanford.edu/proj2015/150_report.pdf)
 
